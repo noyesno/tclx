@@ -1,0 +1,282 @@
+Content-type: text/html
+
+<HTML><HEAD><TITLE>Manpage of Handles</TITLE>
+</HEAD><BODY>
+<H1>Handles</H1>
+Section: Misc. Reference Manual Pages (TCL)<BR>Updated: <BR><A HREF="#index">Index</A>
+<A HREF="http://localhost/cgi-bin/man/man2html">Return to Main Contents</A><HR>
+
+
+
+<A NAME="lbAB">&nbsp;</A>
+<H2>NAME</H2>
+
+Tcl_HandleAlloc, Tcl_HandleFree, Tcl_HandleTblInit, Tcl_HandleTblRelease, Tcl_HandleTblUseCount, Tcl_HandleWalk, Tcl_HandleXlate - Dynamic, handle addressable tables.
+<P>
+<A NAME="lbAC">&nbsp;</A>
+<H2>SYNOPSIS</H2>
+
+<P>
+
+<PRE>
+#include &lt;<A HREF="file:/usr/include/tclExtend.h">tclExtend.h</A>&gt;
+
+void_pt
+Tcl_HandleTblInit (const char *handleBase,
+                   int         entrySize,
+                   int         initEntries);
+
+int
+Tcl_HandleTblUseCount (void_pt  headerPtr,
+                       int      amount);
+
+void
+Tcl_HandleTblRelease (void_pt headerPtr);
+
+void_pt
+Tcl_HandleAlloc (void_pt   headerPtr,
+                 char     *handlePtr);
+
+void_pt
+Tcl_HandleXlate (Tcl_Interp *interp,
+                 void_pt     headerPtr,
+                 const char *handle);
+
+void_pt
+Tcl_HandleWalk (void_pt   headerPtr,
+                int      *walkKeyPtr);
+
+void
+Tcl_WalkKeyToHandle (void_pt   headerPtr,
+                     int       walkKey,
+                     char     *handlePtr);
+
+void
+Tcl_HandleFree (void_pt headerPtr,
+                void_pt entryPtr);
+</PRE>
+
+<A NAME="lbAD">&nbsp;</A>
+<H2>DESCRIPTION</H2>
+
+<P>
+
+The Tcl handle facility provides a way to manage table entries that may be
+referenced by a textual handle from Tcl code.  This is provided for 
+applications that need to create data structures in one command, return a
+reference (i.e. pointer) to that particular data structure and then access
+that data structure in other commands. An example application is file handles.
+<P>
+
+A handle consists of a base name, which is some unique, meaningful name, such
+as `<B>file</B>' and a numeric value appended to the base name (e.g. `file3').
+The handle facility is designed to provide a standard mechanism for building
+Tcl commands that allocate and access table entries based on an entry index.
+The tables are expanded when needed, consequently pointers to entries should
+not be kept, as they will become invalid when the table is expanded.  If the
+table entries are large or pointers must be kept to the entries, then the
+the entries should be allocated separately and pointers kept in the handle 
+table.  A use count is kept on the table.  This use count is intended to
+determine when a table shared by multiple commands is to be release.
+<A NAME="lbAE">&nbsp;</A>
+<H3>Tcl_HandleTblInit</H3>
+
+Create and initialize a Tcl dynamic handle table.  The use count on the
+table is set to one.
+<P>
+
+Parameters:
+<DL COMPACT><DT><DD>
+<B>o </B><I>handleBase</I> - The base name of the handle, the handle will be
+returned in the form &quot;baseNN&quot;, where NN is the table entry number.
+<BR>
+
+<B>o </B><I>entrySize</I> - The size of an entry, in bytes.
+<BR>
+
+<B>o </B><I>initEntries</I> - Initial size of the table, in entries.
+</DL>
+
+<P>
+
+Returns:
+<DL COMPACT><DT><DD>
+A pointer to the table header.  
+</DL>
+
+<A NAME="lbAF">&nbsp;</A>
+<H3>Tcl_HandleTblUseCount</H3>
+
+<P>
+
+Alter the handle table use count by the specified amount, which can be
+positive or negative.  Amount may be zero to retrieve the use count.
+<P>
+
+Parameters:
+<DL COMPACT><DT><DD>
+<B>o </B><I>headerPtr</I> - Pointer to the table header.
+<BR>
+
+<B>o </B><I>amount</I> - The amount to alter the use count by.
+</DL>
+
+<P>
+
+Returns:
+<DL COMPACT><DT><DD>
+The resulting use count.
+</DL>
+
+<A NAME="lbAG">&nbsp;</A>
+<H3>Tcl_HandleTblRelease</H3>
+
+<P>
+
+Decrement the use count on a Tcl dynamic handle table.  If the count
+goes to zero or negative, then release the table.
+<P>
+
+Parameters:
+<DL COMPACT><DT><DD>
+<B>o </B><I>headerPtr</I> - Pointer to the table header.
+</DL>
+
+<A NAME="lbAH">&nbsp;</A>
+<H3>Tcl_HandleAlloc</H3>
+
+<P>
+
+Allocate an entry and associate a handle with it.
+<P>
+
+Parameters:
+<DL COMPACT><DT><DD>
+<B>o </B><I>headerPtr</I> - A pointer to the table header.
+<BR>
+
+<B>o </B><I>handlePtr</I> - Buffer to return handle in. It must be big enough to
+hold the name.
+</DL>
+
+<P>
+
+Returns:
+<DL COMPACT><DT><DD>
+A pointer to the allocated entry (user part).
+</DL>
+
+<A NAME="lbAI">&nbsp;</A>
+<H3>Tcl_HandleXlate</H3>
+
+<P>
+
+Translate a handle to a entry pointer.
+<P>
+
+Parameters:
+<DL COMPACT><DT><DD>
+<B>o </B><I>interp</I> - A error message may be returned in result.
+<BR>
+
+<B>o </B><I>headerPtr</I> - A pointer to the table header.
+<P>
+o <I>handle</I> - The handle assigned to the entry.
+</DL>
+
+<P>
+
+Returns:
+<DL COMPACT><DT><DD>
+A pointer to the entry, or NULL if an error occurred.
+</DL>
+
+<A NAME="lbAJ">&nbsp;</A>
+<H3>Tcl_HandleWalk</H3>
+
+<P>
+
+Walk through and find every allocated entry in a table.  Entries may
+be deallocated during a walk, but should not be allocated.
+<P>
+
+Parameters:
+<DL COMPACT><DT><DD>
+<B>o </B><I>headerPtr</I> - A pointer to the table header.
+<BR>
+
+<B>o </B><I>walkKeyPtr</I> - Pointer to a variable to use to keep track of the
+place in the table.  The variable should be initialized to -1 before
+the first call.
+</DL>
+
+Returns:
+<DL COMPACT><DT><DD>
+A pointer to the next allocated entry, or NULL if there are not more.
+</DL>
+
+<A NAME="lbAK">&nbsp;</A>
+<H3>Tcl_WalkKeyToHandle</H3>
+
+<P>
+
+Convert a walk key, as returned from a call to Tcl_HandleWalk into a
+handle.  The Tcl_HandleWalk must have succeeded.
+<P>
+
+Parameters:
+<DL COMPACT><DT><DD>
+<B>o </B><I>headerPtr</I> - A pointer to the table header.
+<BR>
+
+<B>o </B><I>walkKey</I> - The walk key.
+<BR>
+
+<B>o </B><I>handlePtr</I> - Buffer to return handle in. It must be big enough to
+hold the name.
+</DL>
+
+<A NAME="lbAL">&nbsp;</A>
+<H3>Tcl_HandleFree</H3>
+
+<P>
+
+Frees a handle table entry.
+<P>
+
+Parameters:
+<DL COMPACT><DT><DD>
+<B>o </B><I>headerPtr</I> - A pointer to the table header.
+<BR>
+
+<B>o </B><I>entryPtr</I> - Entry to free.
+</DL>
+
+<P>
+<P>
+<P>
+
+<HR>
+<A NAME="index">&nbsp;</A><H2>Index</H2>
+<DL>
+<DT><A HREF="#lbAB">NAME</A><DD>
+<DT><A HREF="#lbAC">SYNOPSIS</A><DD>
+<DT><A HREF="#lbAD">DESCRIPTION</A><DD>
+<DL>
+<DT><A HREF="#lbAE">Tcl_HandleTblInit</A><DD>
+<DT><A HREF="#lbAF">Tcl_HandleTblUseCount</A><DD>
+<DT><A HREF="#lbAG">Tcl_HandleTblRelease</A><DD>
+<DT><A HREF="#lbAH">Tcl_HandleAlloc</A><DD>
+<DT><A HREF="#lbAI">Tcl_HandleXlate</A><DD>
+<DT><A HREF="#lbAJ">Tcl_HandleWalk</A><DD>
+<DT><A HREF="#lbAK">Tcl_WalkKeyToHandle</A><DD>
+<DT><A HREF="#lbAL">Tcl_HandleFree</A><DD>
+</DL>
+</DL>
+<HR>
+This document was created by
+<A HREF="http://localhost/cgi-bin/man/man2html">man2html</A>,
+using the manual pages.<BR>
+Time: 03:29:19 GMT, January 21, 2019
+</BODY>
+</HTML>

@@ -1,0 +1,249 @@
+Content-type: text/html
+
+<HTML><HEAD><TITLE>Manpage of Tcl_GetKeyedListKeys</TITLE>
+</HEAD><BODY>
+<H1>Tcl_GetKeyedListKeys</H1>
+Section: Misc. Reference Manual Pages (TCL)<BR>Updated: <BR><A HREF="#index">Index</A>
+<A HREF="http://localhost/cgi-bin/man/man2html">Return to Main Contents</A><HR>
+
+
+<A NAME="lbAB">&nbsp;</A>
+<H2>NAME</H2>
+
+TclX_NewKeyedListObj, TclX_KeyedListGet, TclX_KeyedListSet, TclX_KeyedListDelete, TclX_KeyedListGetKeys - Keyed list management routines.
+<A NAME="lbAC">&nbsp;</A>
+<H2>SYNOPSIS</H2>
+
+<P>
+
+<PRE>
+#include &lt;<A HREF="file:/usr/include/tclExtend.h">tclExtend.h</A>&gt;
+
+Tcl_Obj *
+TclX_NewKeyedListObj (void);
+
+int
+TclX_KeyedListGet (Tcl_Interp *interp,
+                   Tcl_Obj    *keylPtr,
+                   char       *key,
+                   Tcl_Obj   **valuePtrPtr);
+
+int
+TclX_KeyedListSet (Tcl_Interp *interp,
+                   Tcl_Obj    *keylPtr,
+                   char       *key,
+                   Tcl_Obj    *valuePtr);
+
+int
+TclX_KeyedListDelete (Tcl_Interp *interp,
+                      Tcl_Obj    *keylPtr,
+                      char       *key);
+
+int
+TclX_KeyedListGetKeys (Tcl_Interp *interp,
+                       Tcl_Obj    *keylPtr,
+                       char       *key,
+                       Tcl_Obj   **listObjPtrPtr);
+
+
+</PRE>
+
+<A NAME="lbAD">&nbsp;</A>
+<H2>DESCRIPTION</H2>
+
+<P>
+
+These routines perform operations on keyed lists.  See the <I>Extended Tcl</I> 
+man page for a description of keyed lists.
+<A NAME="lbAE">&nbsp;</A>
+<H3>TclX_NewKeyedListObj</H3>
+
+<P>
+
+Create and initialize a new keyed list object.
+<P>
+
+Returns:
+<DL COMPACT><DT><DD>
+A pointer to the object.
+</DL>
+
+<A NAME="lbAF">&nbsp;</A>
+<H3>TclX_KeyedListGet</H3>
+
+<P>
+
+<BR>&nbsp;&nbsp;Retrieve&nbsp;a&nbsp;key&nbsp;value&nbsp;from&nbsp;a&nbsp;keyed&nbsp;list.
+<P>
+
+Parameters:
+<DL COMPACT><DT><DD>
+<B>o </B><I>interp</I> - Error message will be return in result if there is an
+error.
+<BR>
+
+<B>o </B><I>keylPtr</I> - Keyed list object to get key from.
+<BR>
+
+<B>o </B><I>key</I> - The name of the key to extract.  Will recusively process
+sub-keys seperated by `.'.
+<BR>
+
+<B>o </B><I>valueObjPtrPtr</I> - If the key is found, a pointer to the key object
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;is&nbsp;returned&nbsp;here.&nbsp;&nbsp;NULL&nbsp;is&nbsp;returned&nbsp;if&nbsp;the&nbsp;key&nbsp;is&nbsp;not&nbsp;present.
+<BR>
+
+</DL>
+
+<P>
+
+Returns:
+<DL COMPACT><DT><DD>
+<B>o TCL_OK</B> - If the key value was returned.
+<BR>
+
+<B>o TCL_BREAK</B> - If the key was not found.
+<BR>
+
+<B>o TCL_ERROR</B> - If an error occured.
+<BR>
+
+</DL>
+
+<A NAME="lbAG">&nbsp;</A>
+<H3>TclX_KeyedListSet</H3>
+
+<P>
+
+<BR>&nbsp;&nbsp;Set&nbsp;a&nbsp;key&nbsp;value&nbsp;in&nbsp;keyed&nbsp;list&nbsp;object.
+<P>
+
+<P>
+Parameters:
+<DL COMPACT><DT><DD>
+<B>o </B><I>interp</I> - Error message will be return in result object.
+<BR>
+
+<B>o </B><I>keylPtr</I> - Keyed list object to update.
+<BR>
+
+<B>o </B><I>key</I> - The name of the key to extract.  Will recusively process
+sub-key seperated by `.'.
+<BR>
+
+<B>o </B><I>valueObjPtr</I> - The value to set for the key.
+<BR>
+
+</DL>
+
+<P>
+
+Returns:
+<DL COMPACT><DT><DD>
+<BR>&nbsp;&nbsp;TCL_OK&nbsp;or&nbsp;TCL_ERROR.
+</DL>
+
+<A NAME="lbAH">&nbsp;</A>
+<H3>TclX_KeyedListDelete</H3>
+
+<P>
+
+<BR>&nbsp;&nbsp;Delete&nbsp;a&nbsp;key&nbsp;value&nbsp;from&nbsp;keyed&nbsp;list.
+<P>
+
+<P>
+Parameters:
+<DL COMPACT><DT><DD>
+<B>o </B><I>interp</I> - Error message will be return in result if there is an
+error.
+<BR>
+
+<B>o </B><I>keylPtr</I> - Keyed list object to update.
+<BR>
+
+<B>o </B><I>key</I> - The name of the key to extract.  Will recusively process
+sub-key seperated by `.'.
+<BR>
+
+</DL>
+
+<P>
+
+Returns:
+<DL COMPACT><DT><DD>
+<B>o TCL_OK</B> - If the key was deleted.
+<BR>
+
+<B>o TCL_BREAK</B> - If the key was not found.
+<BR>
+
+<B>o TCL_ERROR</B> - If an error occured.
+<BR>
+
+</DL>
+
+<A NAME="lbAI">&nbsp;</A>
+<H3>TclX_KeyedListGetKeys</H3>
+
+<P>
+
+<BR>&nbsp;&nbsp;Retrieve&nbsp;a&nbsp;list&nbsp;of&nbsp;keyed&nbsp;list&nbsp;keys.
+<P>
+
+<P>
+Parameters:
+<DL COMPACT><DT><DD>
+<B>o </B><I>interp</I> - Error message will be return in result if there is an
+error.
+<BR>
+
+<B>o </B><I>keylPtr</I> - Keyed list object to get key from.
+<BR>
+
+<B>o </B><I>key</I> - The name of the key to get the sub keys for.  NULL or empty
+to retrieve all top level keys.
+<BR>
+
+<B>o </B><I>listObjPtrPtr</I> - List object is returned here with key as values.
+</DL>
+
+<P>
+
+Returns:
+<DL COMPACT><DT><DD>
+<B>o TCL_OK</B> - If the zero or more key where returned.
+<BR>
+
+<B>o TCL_BREAK</B> - If the key was not found.
+<BR>
+
+<B>o TCL_ERROR</B> - If an error occured.
+<BR>
+
+</DL>
+
+<P>
+<P>
+<P>
+
+<HR>
+<A NAME="index">&nbsp;</A><H2>Index</H2>
+<DL>
+<DT><A HREF="#lbAB">NAME</A><DD>
+<DT><A HREF="#lbAC">SYNOPSIS</A><DD>
+<DT><A HREF="#lbAD">DESCRIPTION</A><DD>
+<DL>
+<DT><A HREF="#lbAE">TclX_NewKeyedListObj</A><DD>
+<DT><A HREF="#lbAF">TclX_KeyedListGet</A><DD>
+<DT><A HREF="#lbAG">TclX_KeyedListSet</A><DD>
+<DT><A HREF="#lbAH">TclX_KeyedListDelete</A><DD>
+<DT><A HREF="#lbAI">TclX_KeyedListGetKeys</A><DD>
+</DL>
+</DL>
+<HR>
+This document was created by
+<A HREF="http://localhost/cgi-bin/man/man2html">man2html</A>,
+using the manual pages.<BR>
+Time: 03:29:19 GMT, January 21, 2019
+</BODY>
+</HTML>

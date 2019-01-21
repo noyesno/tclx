@@ -1,0 +1,266 @@
+Content-type: text/html
+
+<HTML><HEAD><TITLE>Manpage of TclXInit</TITLE>
+</HEAD><BODY>
+<H1>TclXInit</H1>
+Section: Misc. Reference Manual Pages (TCL)<BR>Updated: <BR><A HREF="#index">Index</A>
+<A HREF="http://localhost/cgi-bin/man/man2html">Return to Main Contents</A><HR>
+
+
+<A NAME="lbAB">&nbsp;</A>
+<H2>NAME</H2>
+
+Tclx_Init, Tclxcmd_Init, TclX_Main, Tkx_Init, TkX_Main - Extended Tcl initialization.
+<A NAME="lbAC">&nbsp;</A>
+<H2>SYNOPSIS</H2>
+
+<PRE>
+-ltclx -ltcl
+
+#include &quot;tclExtend.h&quot;
+
+int
+Tclx_Init (Tcl_Interp *interp);
+
+int
+Tclxcmd_Init (Tcl_Interp *interp);
+
+int
+void
+TclX_Main (int               argc,
+           char            **argv,
+           Tcl_AppInitProc  *appInitProc);
+
+int
+Tkx_Init (Tcl_Interp *interp);
+
+void
+TkX_Main (int               argc,
+          char            **argv,
+          Tcl_AppInitProc  *appInitProc);
+
+void
+TclX_SetAppInfo (int   defaultValues,
+                 char *appName,
+                 char *appLongName,
+                 char *appVersion,
+                 int   appPatchlevel);
+
+</PRE>
+
+<A NAME="lbAD">&nbsp;</A>
+<H2>DESCRIPTION</H2>
+
+These functions are used to initialize Extended Tcl and applications based
+on Extended Tcl.  This manual page also discusses various issues and approaches
+of integrating TclX into other applications.
+<A NAME="lbAE">&nbsp;</A>
+<H3>Tclx_Init</H3>
+
+<P>
+
+Initializes Extended Tcl, adding the extended command set to the interpreter.
+This is called from <B>Tcl_AppInit</B>.  This function must be called after
+the <B>Tcl_Init</B> function.  In addition to the standard command set, it
+enables use of tlib packages libraries and makes the standard TclX library
+available.
+<P>
+<P>
+
+Parameters
+<DL COMPACT><DT><DD>
+<B>o </B><I>interp</I> - A pointer to the interpreter to add the commands to.
+</DL>
+
+<P>
+
+Returns:
+<DL COMPACT><DT><DD>
+<B>TCL_OK</B> if all is ok, <B>TCL_ERROR</B> if an error occurred.
+</DL>
+
+<A NAME="lbAF">&nbsp;</A>
+<H3>Tclxcmd_Init</H3>
+
+<P>
+
+Add the TclX command set to the interpreter, with the exception of the
+TclX library management commands.  This is normally called by
+<B>Tclx_Init</B> and should only be used if you don't want the TclX library
+handling.
+<P>
+
+Parameters
+<DL COMPACT><DT><DD>
+<B>o </B><I>interp</I> - A pointer to the interpreter to add the commands to.
+</DL>
+
+<P>
+
+Returns:
+<DL COMPACT><DT><DD>
+<B>TCL_OK</B> if all is ok, <B>TCL_ERROR</B> if an error occurred.
+</DL>
+
+<A NAME="lbAG">&nbsp;</A>
+<H3>TclX_Main</H3>
+
+<P>
+
+This function parses the command line according to the TclX shell
+specification (Unix shell compatible).
+It creates an interpreter and calls the specified function <B>appInitProc</B>
+to initialize any application specific commands.
+It then either evaluates the command of script specified on the command line
+or enters an interactive command loop.
+This procedure never returns, it exits the process when it's done.  Using
+the TclX shell also gives you SIGINT handling in interactive shells.
+<A NAME="lbAH">&nbsp;</A>
+<H3>Tkx_Init</H3>
+
+<P>
+
+Initializes Extended Tcl Tk environment.
+This is called from <B>Tcl_AppInit</B> after the <B>Tk_Init</B> function.
+<P>
+
+Parameters
+<DL COMPACT><DT><DD>
+<B>o </B><I>interp</I> - A pointer to the interpreter to add the commands to.
+</DL>
+
+<P>
+
+Returns:
+<DL COMPACT><DT><DD>
+<B>TCL_OK</B> if all is ok, <B>TCL_ERROR</B> if an error occurred.
+</DL>
+
+<A NAME="lbAI">&nbsp;</A>
+<H3>TkX_Main</H3>
+
+<P>
+
+This function parses the command line according to the wish shell
+specification.
+It creates an interpreter and calls the specified function <B>appInitProc</B>
+to initialize any application specific commands.
+It then either evaluates the command of script specified on the command line
+or enters an interactive command loop.
+This procedure never returns, it exits the process when it's done.  Using
+the TclX wish shell gives you SIGINT handling in interactive shells,
+otherwise it is identical to standard wish.
+<A NAME="lbAJ">&nbsp;</A>
+<H3>TclX_SetAppInfo</H3>
+
+<P>
+
+Store the application information returned by infox.
+<P>
+
+Parameters
+<DL COMPACT><DT><DD>
+<B>o </B><I>defaultValues</I> - If true, then the values are assigned only if they
+are not already defined (defaulted).  If false, the values are always
+set.
+<BR>
+
+<B>o </B><I>appName</I> - Application symbolic name.  
+<BR>
+
+<B>o </B><I>appLongName</I> - Long, natural language application name.
+<BR>
+
+<B>o </B><I>appVersion</I> - Version number of the application.
+<BR>
+
+<B>o </B><I>appPatchlevel</I> - Patch level of the application.  If less than
+zero, don't change.
+</DL>
+
+<P>
+
+String pointers are saved without copying, don't release the memory.
+If the arguments are NULL, don't change the values.
+<A NAME="lbAK">&nbsp;</A>
+<H2>DYNAMIC LOADING OF TCLX</H2>
+
+<P>
+
+TclX can be dynamically loaded on systems that support shared libraries and
+the load command.  This can be done using either the <B>load</B> or
+the <B>package require</B> commands.  If <B>package require</B> is to be used,
+a <B>pkgIndex,tcl</B> must be constructed.
+The <B>pkg_mkIndex</B> does not generate a pkgIndex.tcl file that works with
+TclX.  Instead a command similar to
+<P>
+<DL COMPACT><DT><DD>
+
+package ifneeded Tclx 7.5.0 &quot;load $dir/libtclx.so&quot;
+
+</DL>
+
+<P>
+should be placed in the directory containing the TclX shared library.  A 
+prototype <B>pkgIndex,tcl</B> file is build by TclX and is installed in the
+run time directory under the name  <B>pkgIndex,proto</B>.  This file can't be
+used as-is, but should be renamed and copied or combined with an existing
+<B>pkgIndex,tcl</B> in the directory containing the shared library.
+<P>
+
+There is no need to dynamically load <B>libtkx.so</B>, since it only contains
+support for <B>wishx</B>.
+<P>
+<P>
+<A NAME="lbAL">&nbsp;</A>
+<H2>INTEGRATING TCLX WITH OTHER EXTENSIONS AND APPLICATIONS</H2>
+
+<P>
+
+The main aspects to integrating TclX with into an application is to
+decide if the application is based on the standard Tcl/Tk shells or the
+TclX shells.  If the standard shells are desired, then all that is
+necessary is to call <B>Tclx_Init</B> after <B>Tcl_Init</B> and 
+<BR>&nbsp;<B>Tkx_Init</B>&nbsp;after&nbsp;<B>Tk_Init</B>.&nbsp;&nbsp;This&nbsp;functionality&nbsp;may&nbsp;also&nbsp;be&nbsp;
+dynamically loaded.
+<P>
+
+To get the TclX shell in a Tcl only application, with the <B>tcl</B> command
+functionality, call <B>TclX_Main</B> from the <B>main</B> function instead of
+<B>Tcl_Main</B>.
+This shell has arguments conforming to other Unix shells and SIGINT signal
+handling when interactive,.
+<P>
+
+To get the Tclx shell in a Tk application, with the <B>wishx</B> command
+functionality, call <B>TkX_Main</B> from the <B>main</B> function instead of
+<B>Tk_Main</B>.
+This shell has SIGINT signal handling when interactive,
+<P>
+<P>
+<P>
+
+<HR>
+<A NAME="index">&nbsp;</A><H2>Index</H2>
+<DL>
+<DT><A HREF="#lbAB">NAME</A><DD>
+<DT><A HREF="#lbAC">SYNOPSIS</A><DD>
+<DT><A HREF="#lbAD">DESCRIPTION</A><DD>
+<DL>
+<DT><A HREF="#lbAE">Tclx_Init</A><DD>
+<DT><A HREF="#lbAF">Tclxcmd_Init</A><DD>
+<DT><A HREF="#lbAG">TclX_Main</A><DD>
+<DT><A HREF="#lbAH">Tkx_Init</A><DD>
+<DT><A HREF="#lbAI">TkX_Main</A><DD>
+<DT><A HREF="#lbAJ">TclX_SetAppInfo</A><DD>
+</DL>
+<DT><A HREF="#lbAK">DYNAMIC LOADING OF TCLX</A><DD>
+<DT><A HREF="#lbAL">INTEGRATING TCLX WITH OTHER EXTENSIONS AND APPLICATIONS</A><DD>
+</DL>
+<HR>
+This document was created by
+<A HREF="http://localhost/cgi-bin/man/man2html">man2html</A>,
+using the manual pages.<BR>
+Time: 03:29:19 GMT, January 21, 2019
+</BODY>
+</HTML>

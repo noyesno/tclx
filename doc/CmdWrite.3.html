@@ -1,0 +1,991 @@
+Content-type: text/html
+
+<HTML><HEAD><TITLE>Manpage of Command Writing</TITLE>
+</HEAD><BODY>
+<H1>Command Writing</H1>
+Section: Misc. Reference Manual Pages (TCL)<BR>Updated: <BR><A HREF="#index">Index</A>
+<A HREF="http://localhost/cgi-bin/man/man2html">Return to Main Contents</A><HR>
+
+
+<A NAME="lbAB">&nbsp;</A>
+<H2>NAME</H2>
+
+TclCommandWriting - Writing C language extensions to Tcl.
+<A NAME="lbAC">&nbsp;</A>
+<H2>OVERVIEW</H2>
+
+This document is intended to help the programmer who wishes to extend
+Tcl with C language routines.  It should also be useful to someone
+wishing to add Tcl to an existing editor, communications program, 
+window manager, etc.
+C programming
+information can also be found in the <I>*.3</I> manual pages in the
+<I>doc</I> directory of the Berkeley distribution, and in the <I>*.3</I> 
+manpages in the <I>man</I> directory of Extended Tcl.
+<A NAME="lbAD">&nbsp;</A>
+<H2>WRITING TCL EXTENSIONS IN C</H2>
+
+All C-based Tcl commands are called with four arguments: a client data pointer,
+an interpreter pointer, an argument count and a pointer to an array of
+pointers to character strings containing the Tcl arguments to the command.
+<P>
+
+A simple Tcl extension in C is now presented, and described below:
+<P>
+<PRE>
+    #include &quot;tcl.h&quot;
+
+    int App_EchoCmd(clientData, interp, argc, argv)
+        void       *clientData;
+        Tcl_Interp *interp;
+        int         argc;
+        char      **argv;
+    {
+            int i;
+
+            for (i = 1; i &lt; argc; i++) {
+                    printf(&quot;%s&quot;,argv[i]);
+                    if (i &lt; argc - 1) printf(&quot; &quot;);
+            }
+            printf(&quot;\n&quot;);
+            return TCL_OK;
+    }
+</PRE>
+
+<P>
+
+The client data pointer will be described later.
+<P>
+
+The interpreter pointer is the ``key'' to an interpreter.  It is returned by
+<B>Tcl_CreateInterp</B> and is used extensively
+within Tcl, and will be by your C extensions.  The data structure pointed to 
+by the interpreter pointer,
+and all of the subordinate structures that branch off of it, make up a
+Tcl interpreter, which includes all of the currently defined 
+procedures, commands, variables, arrays and the execution state of that
+interpreter.  (For more information on creating and deleting interpreters,
+please examine the <B><A HREF="http://localhost/cgi-bin/man/man2html?3+CrtInterp">CrtInterp</A></B>(3) manpage in the Berkeley Tcl distribution.
+For information on creating interpreters that include the commands provided
+by Extended Tcl, check out the <B><A HREF="http://localhost/cgi-bin/man/man2html?3+TclX_Init">TclX_Init</A></B>(3) manpage of Extended
+Tcl.
+For a manual page describing the user-visible fields of a Tcl interpreter,
+please look at <B><A HREF="http://localhost/cgi-bin/man/man2html?3+Interp">Interp</A></B>(3) in Berkeley Tcl.)
+<P>
+
+The argument count and pointer to an array of pointers to textual arguments
+is handled by your C code in the same manner that you would use in writing a
+C <I>main</I> function -- the argument count and array of pointers
+works the same
+as in a C <I>main</I> call; pointers to the arguments to the function are
+contained
+in the <I>argv</I> array.  Similar to a C main, the first argument
+(<I>argv[0]</I>) is the
+name the routine was called as (in a main, the name the program
+was invoked as).
+<P>
+
+In the above example, all of the arguments are output with a space between
+each one by looping through <I>argv</I> from one to the argument count,
+<I>argc</I>, and a
+newline is output to terminate the line -- an ``echo'' command.
+<P>
+
+All arguments from a Tcl call to a Tcl C extension are passed as strings.
+If your C routine expects certain numeric arguments, your routine must first
+convert them using the <B>Tcl_GetInt</B> or <B>Tcl_GetDouble</B>
+function, Extended Tcl's <B>Tcl_GetLong</B> or <B>Tcl_GetUnsigned</B>,
+or some other method of your own devising.  Likewise for converting
+boolean values, <B>Tcl_GetBoolean</B> should be used.
+These routines automatically leave an appropriate error message in
+the Tcl interpreter's result buffer and return <B>TCL_ERROR</B> if
+a conversion error occurs.   (For more information on these
+routines, please look at the <B><A HREF="http://localhost/cgi-bin/man/man2html?3+GetInt">GetInt</A></B>(3) manpage in the
+Berkeley Tcl distribution.)
+<P>
+
+Likewise, if you program produces a numeric result, it should
+return a string equivalent to that numeric value.  A common way of doing
+this is something like...
+<P>
+<PRE>
+        sprintf(interp-&gt;result, &quot;%ld&quot;, result);
+</PRE>
+
+<P>
+
+Writing results directly into the interpreter's result buffer is only
+good for relatively short results.  Tcl has a function, <B>Tcl_SetResult</B>,
+which provides the ability for your C
+extensions to return very large strings to Tcl, with the ability to
+tell the interpreter whether it ``owns'' the string (meaning that Tcl should 
+delete the string when it's done with it), that the string is likely to be
+changed or overwritten soon (meaning that Tcl should make a copy of
+the string right away), or that the string won't change (so Tcl can use
+the string as is and not worry about it).  Understanding how results
+are passed back to Tcl is essential to the C extension writer.
+Please study the <B><A HREF="http://localhost/cgi-bin/man/man2html?3+SetResult">SetResult</A></B>(3) manual page in the Tcl distribution.
+<P>
+
+Sophisticated commands should verify their arguments whenever possible,
+both by examining the argument count, by verifying that numeric fields
+are really numeric, that values
+are in range (when their ranges are known), and so forth.
+<P>
+
+Tcl is designed to be as bullet-proof as possible, in the
+sense that no Tcl program should be able to cause Tcl to dump core.  Please
+carry this notion forward with your C extensions by validating arguments 
+as above.
+<P>
+
+<A NAME="lbAE">&nbsp;</A>
+<H2>ANOTHER C EXTENSION - THE MAX COMMAND</H2>
+
+<P>
+In the command below, two or more arguments are compared and the one with
+the maximum value is returned, if all goes well.  It is an error if there
+are fewer than three arguments (the pointer to the ``max'' command text itself,
+<I>argv[0]</I>, and pointers to at least two arguments to compare the
+values of).
+<P>
+
+This routine also shows the use of the programmer labor-saving
+<B>Tcl_AppendResult</B>
+routine.  See the Tcl manual page, <B><A HREF="http://localhost/cgi-bin/man/man2html?3+SetResult">SetResult</A></B>(3), for details.
+Also examine the calls <B>Tcl_AddErrorInfo</B>, <B>Tcl_SetErrorCode</B> 
+and <B>Tcl_PosixError</B> documented in the Tcl manual 
+page <B><A HREF="http://localhost/cgi-bin/man/man2html?3+AddErrInfo">AddErrInfo</A></B>(3).
+<P>
+<PRE>
+    int
+    Tcl_MaxCmd (clientData, interp, argc, argv)
+        char       *clientData;
+        Tcl_Interp *interp;
+        int         argc;
+        char      **argv;
+    {
+        int maxVal = MININT;
+        int maxIdx = 1;
+        int value, idx;
+
+
+        if (argc &lt; 3) {
+            Tcl_AppendResult (interp, &quot;bad # arg: &quot;, argv[0],
+                              &quot; num1 num2 [..numN]&quot;, (char *)NULL);
+            return TCL_ERROR;
+        }
+
+        for (idx = 1; idx &lt; argc; idx++) {
+            if (Tcl_GetInt (argv[idx], 10, &amp;Value) != TCL_OK)
+                return TCL_ERROR;
+
+            if (value &gt; maxVal) {
+                maxVal = value;
+                maxIdx = idx;
+            }
+        }
+        Tcl_SetResult (interp, argv [maxIdx], TCL_VOLATILE);
+        return TCL_OK;
+    }
+</PRE>
+
+<P>
+
+When Tcl-callable functions complete, they should normally return
+<B>TCL_OK</B> or <B>TCL_ERROR</B>.
+<B>TCL_OK</B> is returned when the command succeeded and <B>TCL_ERROR</B>
+is returned when the command has failed in some abnormal way.  
+<B>TCL_ERROR</B> should
+be returned for all syntax errors, non-numeric values (when numeric ones
+were expected), and so forth.  Less clear in some cases is whether Tcl errors
+should be returned or whether a function should just return a status value.
+For example, end-of-file during a <I>gets</I> returns a status,
+but <I>open</I>
+returns an error if the open fails.  Errors can be caught from
+Tcl programs using the <I>catch</I> command.  (See Tcl's <B><A HREF="http://localhost/cgi-bin/man/man2html?n+catch">catch</A></B>(n)
+and <B><A HREF="http://localhost/cgi-bin/man/man2html?n+error">error</A></B>(n) manual pages.)
+<P>
+
+Less common return values are 
+<B>TCL_RETURN</B>, <B>TCL_BREAK</B> and <B>TCL_CONTINUE</B>.
+These are used if you are adding new control and/or looping
+structures to Tcl.  To see these values in action, examine the source code to
+Tcl's <I>while</I>, <I>for</I> and <I>if</I>, and Extended Tcl's <I>loop</I> 
+commands.
+<P>
+
+Note the call to <I>Tcl_SetResult</I> in the above command to set the return
+value to Tcl.  <B>TCL_VOLATILE</B> is used because the memory containing the
+result will be freed upon the function's return.
+<P>
+<A NAME="lbAF">&nbsp;</A>
+<H2>ANOTHER C EXTENSION - THE LREVERSE COMMAND</H2>
+
+<P>
+In the command below, one list is passed as an argument, and a list
+containing all of the elements of the list in reverse order is
+returned.  It is an error if anything other than two arguments are
+passed (the pointer to the ``lreverse'' command text itself,
+<I>argv[0]</I>, and a pointer to the list to reverse.
+<P>
+
+Once <I>lreverse</I> has determined that it has received the correct
+number of arguments, <B>Tcl_SplitList</B> is called to break the
+list into an <I>argc</I> and <I>argv</I> array of pointers.
+<P>
+
+<I>lreverse</I> then operates on the array of pointers, swapping them
+from lowest to highest, second-lowest to second-highest, and so forth.
+<P>
+
+Finally <B>Tcl_Merge</B> is calleds to create a single new string containing
+the reversed list and it is set as the result via <B>Tcl_SetResult</B>.
+Note that <B>TCL_DYNAMIC</B> is used to tell <B>Tcl_SetResult</B> that
+it now owns the string and it is up to Tcl to free the string
+when it is done with it.
+<P>
+
+Note that it <I>is</I> safe to play around with the <I>argv</I> list like
+this, and that a single call to <B>ckfree</B> can be made to free all
+the data returned by <B>Tcl_SplitList</B> in this manner.
+<P>
+
+<P>
+<PRE>
+int
+Tcl_LreverseCmd(notUsed, interp, argc, argv)
+    ClientData notUsed;                 /* Not used. */
+    Tcl_Interp *interp;                 /* Current interpreter. */
+    int argc;                           /* Number of arguments. */
+    char **argv;                        /* Argument strings. */
+{
+    int listArgc, lowListIndex, hiListIndex;
+    char **listArgv;
+    char *temp, *resultList;
+
+    if (argc != 2) {
+        Tcl_AppendResult(interp, &quot;wrong # args: should be               &quot; list  return TCL_ERROR;
+    }
+
+    if (Tcl_SplitList(interp, argv[1], &amp;listArgc, &amp;listArgv) != TCL_OK) {
+        return TCL_ERROR;
+    }
+    for (lowListIndex = 0, hiListIndex = listArgc;
+         --hiListIndex &gt; lowListIndex; lowListIndex++) {
+        temp = listArgv[lowListIndex];
+        listArgv[lowListIndex] = listArgv[hiListIndex];
+        listArgv[hiListIndex] = temp;
+    }
+    resultList = Tcl_Merge (listArgc, listArgv);
+    ckfree (listArgv);
+    Tcl_SetResult (interp, resultList, TCL_DYNAMIC);
+    return TCL_OK;
+}
+</PRE>
+
+<P>
+
+<A NAME="lbAG">&nbsp;</A>
+<H2>INSTALLING YOUR COMMAND</H2>
+
+
+To install your command into Tcl you must call 
+<B>Tcl_CreateCommand</B>, passing
+it the pointer to the interpreter you want to install the command into,
+the name of the command, a pointer to the C function that implements the
+command, a client data pointer,
+and a pointer to an optional callback routine.
+<P>
+
+The client data pointer and the callback routine will be described later.
+<P>
+
+For example, for the max function above (which, incidentally, comes from
+TclX's tclXmath.c in the <I>TclX7.4/src</I> directory):
+<P>
+<PRE>
+    Tcl_CreateCommand (interp, &quot;max&quot;, Tcl_MaxCmd, (ClientData)NULL, 
+                      (void (*)())NULL);
+</PRE>
+
+<P>
+
+In the above example, the max function is added
+to the specified interpreter.  The client data pointer and callback
+function pointer are NULL.  (For complete information on
+<B>Tcl_CreateCommand</B> and its companion routine, <B>Tcl_CommandInfo</B>,
+please examine the <B><A HREF="http://localhost/cgi-bin/man/man2html?3+CrtCommand">CrtCommand</A></B>(3) command page in the
+Berkeley Tcl distribution.)
+<P>
+
+<A NAME="lbAH">&nbsp;</A>
+<H2>DYNAMIC STRINGS</H2>
+
+<P>
+
+<P>
+<I>Dynamic strings</I>
+are an important abstraction that first became 
+available with Tcl 7.0.  Dynamic strings, or <I>DStrings</I>, provide
+a way to build up arbitrarily long strings through a repeated process
+of appending information to them.  DStrings reduce the amount of
+allocating and copying required to add information to a string.
+Further, they simplify the process of doing so.  For complete information
+on dynamic strings, please examine the <B><A HREF="http://localhost/cgi-bin/man/man2html?3+DString">DString</A></B>(3) manual page in
+the Berkeley Tcl distribution.
+<P>
+
+<A NAME="lbAI">&nbsp;</A>
+<H2>CLIENT DATA</H2>
+
+<P>
+
+The client data pointer provides a means for Tcl commands to have data
+associated with them that is not global to the C program nor included in
+the Tcl core.  Client data is essential in a multi-interpreter environment
+(where a single program has created and is making use of multiple
+Tcl interpreters)
+for the C routines to maintain any permanent data they need on a per-interpreter
+basis.
+Otherwise there would be reentrancy problems.
+Tcl solves this through the client data mechanism.  When you are about
+to call 
+<B>Tcl_CreateCommand</B> to add a new command to an interpreter, if that
+command needs to keep some read/write data across invocations,
+you should allocate the space, preferably using <B>ckalloc</B>, then pass
+the address of that space as the ClientData pointer to
+<B>Tcl_CreateCommand</B>.
+<P>
+
+When your command is called from Tcl, the ClientData pointer you gave to 
+<B>Tcl_CreateCommand</B> when you added the command to that interpreter
+is passed
+to your C routine through the ClientData pointer calling argument.
+<P>
+
+Commands that need to share this data with one another can do so by using the
+same ClientData pointer when the commands are added.
+<P>
+
+It is important to note that the Tcl extensions in the <I>tclX7.4/src</I>
+directory have had all of their data set up in this way.
+Since release 6.2, Extended Tcl has supported
+multiple interpreters within one invocation of Tcl.
+<A NAME="lbAJ">&nbsp;</A>
+<H2>THEORY OF HANDLES</H2>
+
+Sometimes you need to have a data element that isn't readily representable
+as a string within Tcl, for example a pointer to a complex C data structure.
+It is not a good idea to try to pass pointers around within
+Tcl as strings by converting them to and from hex or integer representations,
+for example.  It is too easy to mess one up, and the likely outcome of
+doing that is a core dump.
+<P>
+
+Instead we have developed and made use of the concept 
+of <I>handles</I>.
+Handles are identifiers a C extension can pass to, and accept from,
+Tcl to make the transition between what your C code knows something as
+and what name Tcl knows it by to be as safe and painless as possible.  
+For example,
+the stdio package included in Tcl uses file handles.  When you open a
+file from Tcl, a handle is returned of the form <B>file</B><I>n</I> where
+<I>n</I> is a file number.  When you pass the file handle back to <I>puts</I>,
+<I>gets</I>, <I>seek</I>, <I>flush</I> and so forth, they validate the file
+handle by checking the the <B>file</B> text is present, then converting
+the file number to an integer that they use to look into a data
+structure of pointers
+to Tcl open file structures, which contain a Unix file descriptor, flags
+indicating whether or not the file is currently open, whether the file is
+a file or a pipe and so forth.
+<P>
+
+Handles have proven so useful that, as of release 6.1a, general support
+has been added for them.
+If you need a similar capability, it would be best to use the handle
+routines, documented in <B><A HREF="http://localhost/cgi-bin/man/man2html?3+Handles">Handles</A></B>(3) in Extended Tcl.
+We recommend that you use a
+unique-to-your-package textual handle coupled with a specific identifier
+and let the handle management routines validate it when it's passed back.
+It is much easier to
+track down a bug with an implicated handle named something like <B>file4</B>
+or <B>bitmap6</B> than just <B>6</B>.
+<P>
+
+<A NAME="lbAK">&nbsp;</A>
+<H2>TRACKING MEMORY CORRUPTION PROBLEMS</H2>
+
+Occasionally you may write code that scribbles past the end of an
+allocated piece of memory.  The memory debugging
+routines included in Tcl can help find these problems.  See
+<I>Memory(TCL)</I> for details.
+<P>
+
+<A NAME="lbAL">&nbsp;</A>
+<H2>INSTALLING YOUR EXTENSIONS INTO EXTENDED TCL</H2>
+
+To add your extensions to Extended Tcl, you must compile them and cause
+them to be linked with TclX.  For the routines to be linked into the
+<B>tcl</B> and <B>wishx</B> executables, they
+must be referenced (directly or indirectly) from TclX.  For these extensions
+to be visible as Tcl commands, they must be installed into Tcl with
+<B>Tcl_CreateCommand</B>.
+<P>
+
+Application-specific startup is accomplished by creating or editing the
+<I>Tcl_AppInit</I> function.  In <I>Tcl_AppInit</I> you should add a
+call to an application-specific init function which you create.  This
+function should take the address of the interpreter it should install its
+commands into, and it should install those commands with <B>Tcl_CreateCommand</B>
+and do any other application-specific startup that is necessary.
+<P>
+
+The naming convention for application startup routines is <B>App_Init</B>,
+where <I>App</I> is the name of your application.  For example, to add
+an application named <I>cute</I> one would create a <I>Cute_Init</I> routine
+that expected a <B>Tcl_Interp</B> pointer as an argument, and add the following
+code to <I>Tcl_AppInit</I>:
+<P>
+<PRE>
+    if (Cute_Init (interp) == TCL_ERROR) {
+        return TCL_ERROR;
+    }
+</PRE>
+
+<P>
+
+As you can guess from the above example, if your init routine is unable
+to initialize, it should use <B>Tcl_AppendResult</B> to provide some kind
+of useful error message back to TclX, then return <B>TCL_ERROR</B> to
+indicate that an error occurred.  If the routine executed successfully,
+it should return <B>TCL_OK</B>.
+<P>
+
+When you examine <I>Tcl_AppInit</I>, note that there is 
+one call already there to install an application -- the call to
+<I>TclX_Init</I> installs Extended Tcl into the Tcl core.
+<P>
+<A NAME="lbAM">&nbsp;</A>
+<H2>MAKING APPLICATION INFORMATION VISIBLE FROM EXTENDED TCL</H2>
+
+TclX's <B>infox</B> command can return several pieces of information
+relevant to Extended Tcl, including the application's name, descriptive
+name, patch level and version.  Your application's startup can set
+these variables to application-specific values.  If it doesn't, they
+are given default values for Extended Tcl.
+<P>
+
+To set these values, first be sure that you include either <B>tclExtend.h</B>
+or <B>tclExtdInt.h</B> from the source file that defines your init routine.
+This will create external declarations for the variables.  Then, set the
+variables in your init route, for example:
+<P>
+<PRE>
+    tclAppName = &quot;cute&quot;;
+    tclAppLongName = &quot;Call Unix/Tcl Environment&quot;;
+    tclAppVersion = &quot;2.1&quot;;
+</PRE>
+
+<P>
+
+Note that the default values are set by <I>TclX_Init</I>, so if you wish
+to override them, you must call your init routine in <I>Tcl_AppInit</I>
+after its call to <I>TclX_Init</I>.
+<P>
+
+<A NAME="lbAN">&nbsp;</A>
+<H2>EXTENDED TCL EXIT</H2>
+
+<P>
+
+When Extended Tcl exits,
+<B>Tcl_DeleteInterp</B> may be called to free memory used by Tcl -- normally,
+this is only called if <B>TCL_MEM_DEBUG</B> was defined, since Unix
+will return all of the allocated memory back to the system, anyway.
+If <B>TCL_MEM_DEBUG</B> was defined, it is called so that any memory that
+was allocated without ever being freed can be detected.  This greatly
+reduces the amount of work to detect and track down memory leaks, a
+situation where some piece of your code allocates memory repeatedly without
+ever freeing it, or without always freeing it.
+<P>
+
+It is often necessary for an application to perform special cleanup
+functions upon the deletion of an interpreter as well.  To facilitate
+this activity, Tcl provides the ability to perform a function callback
+when an interpreter is deleted.  To arrange for a C function to be
+called when the interpreter is deleted, call <B>Tcl_CallWhenDeleted</B>
+from your application initialization routine.  For details on how to
+use this function, read the <B><A HREF="http://localhost/cgi-bin/man/man2html?3+CallDel">CallDel</A></B>(3) manual page that ships with
+Berkeley Tcl.
+<P>
+
+<A NAME="lbAO">&nbsp;</A>
+<H2>EXECUTING TCL CODE FROM YOUR C EXTENSION</H2>
+
+<P>
+Suppose you are in the middle of coding a C extension and you realize
+that you need some operation performed, one that would be simple from
+Tcl but possibly excruciating to do directly in C.  Tcl provides
+the <B>Tcl_Eval</B>, <B>Tcl_VarEval</B>, <B>Tcl_EvalFile</B> and
+<B>Tcl_GlobalEval</B> functions for the purpose of executing Tcl code
+from within a C extension.  The results of the call will be in
+<B>interp-&gt;result</B>.  For more information please consult the
+<B><A HREF="http://localhost/cgi-bin/man/man2html?3+Eval">Eval</A></B>(3) manual page within the Tcl distribution.
+<P>
+
+<A NAME="lbAP">&nbsp;</A>
+<H2>ACCESSING TCL VARIABLES AND ARRAYS FROM YOUR C EXTENSIONS</H2>
+
+<P>
+Tcl variables and arrays can be read from a C extension through
+the <B>Tcl_GetVar</B> and <B>Tcl_GetVar2</B> functions, and
+set from C extensions through the <B>Tcl_SetVar</B> and
+<B>Tcl_SetVar2</B> functions.  They can also be unset via
+the <B>Tcl_UnsetVar</B> and <B>Tcl_UnsetVar2</B> functions.
+For complete information on these functions,
+please refer to the <B><A HREF="http://localhost/cgi-bin/man/man2html?3+SetVar">SetVar</A></B>(3) manual
+page in the <I>doc</I> directory of the Berkeley Tcl distribution.
+<P>
+
+<A NAME="lbAQ">&nbsp;</A>
+<H2>LINKING TCL VARIABLES TO C VARIABLES</H2>
+
+<P>
+<B>Tcl_LinkVar</B> and <B>Tcl_UnlinkVar</B> can be used to automatically
+keep Tcl variables synchronized with corresponding C variables.  Once
+a Tcl variable has been linked to a C variable with <B>Tcl_LinkVar</B>,
+anytime the Tcl variable is read the value of the C variable will be
+returned, and when the Tcl variable is written, the C variable will
+be updated with the new value.
+<P>
+
+<B>Tcl_LinkVar</B> uses variable traces to keep the Tcl variable
+named by <I>varName</I> in sync with the C variable at the address
+given by <I>addr</I>.
+<P>
+
+Whenever the Tcl variable is read the value of the C variable will
+be returned, and whenever the Tcl variable is written the C
+variable will be updated to have the same value.
+<P>
+
+<I>Int</I>, <I>double</I>, <I>boolean</I> and <I>char *</I> variables
+are supported.  For more information, please examine the <B><A HREF="http://localhost/cgi-bin/man/man2html?3+LinkVar">LinkVar</A></B>(3)
+manual page in the Berkeley Tcl distribution.
+<P>
+
+<A NAME="lbAR">&nbsp;</A>
+<H2>ADDING NEW MATH FUNCTIONS TO TCL</H2>
+
+As of Tcl version 7.0, math functions such as <I>sin</I>, <I>cos</I>, etc,
+are directly supported within Tcl expressions.  These obsolete the
+Extended Tcl commands that provided explicit calls for these functions
+for many releases.
+<P>
+
+New math functions can be added to Tcl, or existing math functions
+can be replaced, by calling <B>Tcl_CreateMathFunc</B>.
+<P>
+
+For more information on adding math functions, please examine the
+<B><A HREF="http://localhost/cgi-bin/man/man2html?3+CrtMathFnc">CrtMathFnc</A></B>(3) manual page in the Berkeley Tcl distribution.
+<P>
+
+<A NAME="lbAS">&nbsp;</A>
+<H2>PERFORMING TILDE SUBSTITUTIONS ON FILENAMES</H2>
+
+<P>
+The <B>Tcl_TildeSubst</B> function is available to C extension writers
+to perform tilde substitutions on filenames.  If the name starts
+with a ``~'' character, the function returns a new string where
+the name is replaced with the home directory of the given user.
+For more information please consult the <B><A HREF="http://localhost/cgi-bin/man/man2html?3+TildeSubst">TildeSubst</A></B>(3) manual
+page in the Berkeley Tcl distribution.
+<P>
+
+<A NAME="lbAT">&nbsp;</A>
+<H2>SETTING THE RECURSION LIMIT</H2>
+
+<P>
+Tcl has a preset recursion limit that limits the maximum allowable nesting
+depth of calls within an interpreter.  This is useful for detecting
+infinite recursions before other limits such as the process memory limit
+or, worse, available swap space on the system, are exceeded.
+<P>
+
+The default limit is just a guess, however, and applications that make
+heavy use of recursion may need to call <B>Tcl_SetRecursionLimit</B>
+to raise this limit.  For more information, please consult the
+<B><A HREF="http://localhost/cgi-bin/man/man2html?3+SetRecLmt">SetRecLmt</A></B>(3) manual page in the Berkeley Tcl distribution.
+<P>
+
+<A NAME="lbAU">&nbsp;</A>
+<H2>HANDLING SIGNALS FROM TCL EXTENSIONS</H2>
+
+<P>
+If an event such as a signal occurs while a Tcl script is being
+executed, it isn't safe to do much in the signal handling routine --
+the Tcl environment cannot be safely manipulated at this point because
+it could be in the middle of some operation, such as updating pointers,
+leaving the interpreter in an unreliable state.
+<P>
+
+The only safe approach is to set a flag indicating that the event
+occurred, then handle the event later when the interpreter has returned
+to a safe state, such as after the current Tcl command completes.
+<P>
+
+The <B>Tcl_AsyncCreate</B>, <B>Tcl_AsyncMark</B>, <B>Tcl_AsyncInvoke</B>,
+and <B>Tcl_AsyncDelete</B> functions provide a safe mechanism for dealing
+with signals and other asynchronous events.  For more information on how
+to use this capability, please refer to the <B><A HREF="http://localhost/cgi-bin/man/man2html?3+Async">Async</A></B>(3) manual page
+in the Berkeley Tcl distribution.
+<P>
+<A NAME="lbAV">&nbsp;</A>
+<H2>PARSING BACKSLASH SEQUENCES</H2>
+
+<P>
+The <B>Tcl_Backslash</B> function is called to parse Tcl backslash sequences.
+These backslash sequences are the usual sort that you see in the C
+programming language, such as <B>\n</B> for newline, <B>\r</B> for return, and
+so forth.  <B>Tcl_Backslash</B> parses a single backslash sequence and
+returns a single character corresponding to the backslash sequence.
+<P>
+
+For more info on this call, look at the <B><A HREF="http://localhost/cgi-bin/man/man2html?3+Backslash">Backslash</A></B>(3) manual page
+in the Berkeley Tcl distribution.  For information on the valid backslash
+sequences, consult the summary of Tcl language syntax, <B><A HREF="http://localhost/cgi-bin/man/man2html?n+Tcl">Tcl</A></B>(n)
+in the same distribution.
+<P>
+
+<A NAME="lbAW">&nbsp;</A>
+<H2>HASH TABLES</H2>
+
+<P>
+<I>Hash tables</I> provide Tcl with a high-performance facility for looking up
+and managing key-value pairs located and maintained in memory.  Tcl uses 
+hash tables internally to locate procedure definitions, Tcl variables, 
+array elements, file handles and so forth.  Tcl makes the hash table
+functions accessible to C extension writers as well.
+<P>
+
+Hash tables grow automatically to maintain efficiency, rather than exposing
+the table size to the programmer at allocation time, which would needlessly 
+add complexity to Tcl and would be prone to inefficiency due 
+to the need to guess the number of items that will go into the table,
+and the seemingly inevitable growth in amount of data processed
+per run over the life of the program.
+<P>
+
+For more information on hash tables, please consult the <B><A HREF="http://localhost/cgi-bin/man/man2html?3+Hash">Hash</A></B>(3) manual
+page in the Berkeley Tcl distribution.
+<P>
+
+<A NAME="lbAX">&nbsp;</A>
+<H2>TRACING VARIABLE ACCESSES</H2>
+
+<P>
+The C extension writer can arrange to have a C routine called whenever a
+Tcl variable is read, written, or unset.  Variable traces are the
+mechanism by which Tk toolkit widgets such as radio and checkbuttons,
+messages and so forth update without Tcl programmer intervention when their 
+data variables are changed.  They are also used by the routine that links
+Tcl and C variables, <B>Tcl_LinkVar</B>, described above.
+<P>
+
+<B>Tcl_TraceVar</B> is called to establish a variable trace.  Entire arrays
+and individual array elements can be traced as well.  If the programmer
+already has an array name in one string and a variable name in another,
+<B>Tcl_TraceVar2</B> can be called.  Calls are also available to
+request information about traces and to delete them.
+<P>
+
+For more information on variable traces, consult the <B><A HREF="http://localhost/cgi-bin/man/man2html?3+TraceVar">TraceVar</A></B>(3)
+manual page in the Berkeley Tcl distribution.
+<P>
+
+<A NAME="lbAY">&nbsp;</A>
+<H2>TRACING EXECUTION</H2>
+
+<P>
+Tcl has the ability to call C routines for every command it executes,
+up to a specified depth of nesting levels.  The command <B>Tcl_CreateTrace</B>
+creates an execution trace; <B>Tcl_DeleteTrace</B> deletes it.
+<P>
+
+Command tracing is used in Extended Tcl to implement the
+<I>cmdtrace</I> Tcl command, a useful command for debugging
+Tcl applications.
+<P>
+
+For complete information on execution tracing, please look at
+the <B><A HREF="http://localhost/cgi-bin/man/man2html?3+CrtTrace">CrtTrace</A></B>(3) manual pages in the Berkeley Tcl distribution.
+<P>
+
+<A NAME="lbAZ">&nbsp;</A>
+<H2>EVALUATING TCL EXPRESSIONS FROM C</H2>
+
+<P>
+<B>Tcl_ExprLong</B>, <B>Tcl_ExprDouble</B>, <B>Tcl_ExprBool</B>,
+and <B>Tcl_ExprString</B> can be called to evaluate Tcl expressions
+from within a C routine.  Depending on the routine called, the
+result is either a C <I>long</I>, a <I>double</I>, a boolean
+(<I>int</I> with a value of <B>0</B> or <I>1</I>), or a <I>char *</I>
+(pointed to by <I>interp-&gt;result</I>).
+<P>
+
+For complete information on evaluating Tcl expressions from C, you
+are invited to examine the <B><A HREF="http://localhost/cgi-bin/man/man2html?3+ExprLong">ExprLong</A></B>(3) manpage in the
+Berkeley Tcl distribution.
+<P>
+
+<A NAME="lbBA">&nbsp;</A>
+<H2>PATTERN MATCHING</H2>
+
+<P>
+The <B>Tcl_StringMatch</B> function can be called to see
+if a string matches a specified pattern.  <B>Tcl_StringMatch</B>
+is called by the Tcl <I>string match</I> command, so the format for
+patterns is identical.  The pattern format is similar to the one
+used by the C-shell; <B><A HREF="http://localhost/cgi-bin/man/man2html?n+string">string</A></B>(n) describes this format.
+<P>
+
+More information about <B>Tcl_StringMatch</B> is available in
+the <B><A HREF="http://localhost/cgi-bin/man/man2html?3+StrMatch">StrMatch</A></B>(3) manpage in the Berkeley Tcl distribution.
+<P>
+
+<A NAME="lbBB">&nbsp;</A>
+<H2>REGULAR EXPRESSION PATTERN MATCHING</H2>
+
+<B>Tcl_RegExpMatch</B> can be called to determine whether
+a string matches a regular expression.  <B>Tcl_RegExpMatch</B>
+is used internally by the <I>regexp</I> Tcl command.
+<P>
+
+For more information on this function, please consult
+the <B><A HREF="http://localhost/cgi-bin/man/man2html?3+RegExp">RegExp</A></B>(3) manpage in the Berkeley Tcl distribution.
+<P>
+
+<A NAME="lbBC">&nbsp;</A>
+<H2>MANIPULATING TCL LISTS FROM C EXTENSIONS</H2>
+
+<P>
+The C extension writer often needs to create, manipulate and decompose
+Tcl lists.  <B>Tcl_SplitList</B> parses a list into an <I>argv</I> and
+<I>argc</I> like to the way command-line arguments are
+passed to a Tcl extension.  <B>Tcl_Merge</B>, likewise, creates a single string
+(pointer to a <I>char *</I>) from an <I>argv</I> and <I>argc</I>.
+<P>
+
+Two routines, <B>Tcl_ScanElement</B> and <B>Tcl_ConvertElement</B>,
+do most of the work of <B>Tcl_Merge</B>, and may also be of use
+to the C programmer.
+<P>
+
+For more information on these commands, please consult the
+<B><A HREF="http://localhost/cgi-bin/man/man2html?3+SplitList">SplitList</A></B>(3) manual page in the Berkeley Tcl distribution.
+<P>
+
+<A NAME="lbBD">&nbsp;</A>
+<H2>CONCATENATING STRINGS</H2>
+
+<P>
+<B>Tcl_Concat</B> concatenates zero or more strings into a single
+string.  The strings are space-separated.  <B>Tcl_Concat</B>
+works like <I>Tcl_Merge</I>, except that <B>Tcl_Concat</B> does
+not attempt to make the resulting string into a valid Tcl list.
+<P>
+
+<B>Tcl_Concat</B> is documented in the <B><A HREF="http://localhost/cgi-bin/man/man2html?3+Concat">Concat</A></B>(3) manpage
+in the Berkeley Tcl distribution.
+<P>
+
+<A NAME="lbBE">&nbsp;</A>
+<H2>DETECTING WHETHER OR NOT YOU HAVE A COMPLETE COMMAND</H2>
+
+<P>
+C routines that collect data to form a command to be passed to
+<I>Tcl_Eval</I> often need a way to tell whether they have a complete
+command already or whether they need more data.  (Programs that read
+typed-in Tcl input such as Tcl shells need this capability.)
+<B>Tcl_CommandComplete</B> can be used to tell whether or not you have a
+complete command.
+<P>
+
+For more information examine <B><A HREF="http://localhost/cgi-bin/man/man2html?3+CmdCmplt">CmdCmplt</A></B>(3) in the
+Berkeley Tcl distribution.
+<P>
+
+<A NAME="lbBF">&nbsp;</A>
+<H2>RECORDING COMMANDS FOR COMMAND HISTORY</H2>
+
+<P>
+Tcl has a history mechanism that is accessed from Tcl through the
+<I>history</I> command.  To propagate commands into the command
+history, your extension should call <I>Tcl_RecordAndEval</I>.
+This command works just like <I>Tcl_Eval</I>, except that it
+records the command as well as executing it.
+<P>
+
+<I>Tcl_RecordAndEval</I> should only be called with user-entered
+top-level commands, since the history mechanism exists to allow
+the user to easily access, edit and reissue previously issued
+commands.
+<P>
+
+For complete information on this function, please examine the
+<B>RecordEval</B>.3 manual page in the Berkeley Tcl distribution.
+<P>
+
+<A NAME="lbBG">&nbsp;</A>
+<H2>CONVERTING FLOATING POINT VALUES TO STRINGS</H2>
+
+<P>
+<B>Tcl_PrintDouble</B> converts a C <I>double</I> into
+an ASCII string.  It ensures that the string output
+will continue to be interpreted as a floating point
+number, rather than an integer, by always putting a 
+``.'' or ``e'' into the string representing the number.
+The precision of the output
+string is controlled by the Tcl <B>tcl_precision</B>
+variable.
+<P>
+
+For complete information on <I>Tcl_PrintDouble</I>,
+examine <B><A HREF="http://localhost/cgi-bin/man/man2html?3+PrintDbl">PrintDbl</A></B>(3) in the Berkeley
+Tcl distribution.
+<P>
+
+<A NAME="lbBH">&nbsp;</A>
+<H2>CREATING CHILD PROCESSES AND PIPELINES FROM C</H2>
+
+<P>
+<B>Tcl_CreatePipeline</B> is a useful procedure for spawning
+child processes.  The child (or pipeline of children)
+can have its standard input, output and error redirected
+from files, variables or pipes.  To understand the meaning
+of the redirection symbols understood by this function,
+look at the <B><A HREF="http://localhost/cgi-bin/man/man2html?n+exec">exec</A></B>(n) Tcl
+command.  For complete information on <B>Tcl_CreatePipeline</B>,
+please examine <B><A HREF="http://localhost/cgi-bin/man/man2html?3+CrtPipelin">CrtPipelin</A></B>(3).
+<P>
+
+<A NAME="lbBI">&nbsp;</A>
+<H2>ACCESSING TCL FILEHANDLES FROM C</H2>
+
+<P>
+Files opened from your C code can be made visible to Tcl code
+via the <B>Tcl_EnterFile</B> function.  Likewise, Tcl filehandles
+passed to your C extension can be translated to a Posix
+<I>FILE *</I> structure using the <B>Tcl_GetOpenFile</B> function.
+<P>
+
+For complete explanations of these commands, please look at
+<B><A HREF="http://localhost/cgi-bin/man/man2html?3+EnterFile">EnterFile</A></B>(3) in the Berkeley Tcl distribution.
+<P>
+<A NAME="lbBJ">&nbsp;</A>
+<H2>MANAGING BACKGROUND PROCESS TERMINATION AND CLEANUP</H2>
+
+<P>
+When a Posix system does a <I>fork</I> to create a new process,
+the process ID of the child is returned to the caller.  After
+the child process exits, its process table entry (and some
+other data associated with the process) cannot be
+reclaimed by the operating system until a call to
+<I>waitpid</I>, or one of a couple of other, similar system calls,
+has been made by the parent process.
+<P>
+
+The C extension writer who has created a subprocess, by whatever
+mechanism, can turn over responsibility for detecting
+the processes' termination and calling <I>waitpid</I> to obtain
+its exit status by calling <B>Tcl_DetachPids</B>.
+<P>
+
+<B>Tcl_ReapDetachedProcs</B> is the C routine that will
+detect the termination of any processes turned over to Tcl,
+permitting the processes to be fully reclaimed by the operating system.
+<P>
+
+For complete information on these routines, please look at
+<I><A HREF="http://localhost/cgi-bin/man/man2html?3+DetachPids">DetachPids</A>(3)</I> in the Berkeley Tcl distribution.
+<P>
+
+<A NAME="lbBK">&nbsp;</A>
+<H2>FOR MORE INFORMATION</H2>
+
+<P>
+
+In addition to the documentation referenced above, you can learn a lot
+by studying the source code of the commands added by Tcl, Tk and 
+Extended Tcl.  The <I>comp.lang.tcl</I> Usenet newsgroup is read by
+tens of thousands of Tcl people, and is a good place to ask questions.
+Finally, if you have interactive Internet access, you can ftp to
+<I><A HREF="ftp://ftp.aud.alcatel.com">ftp.aud.alcatel.com</A></I>, the site for contributed Tcl sources.
+This site contains quite a few extensions, applications, and so forth,
+including several object-oriented extension packages.
+<P>
+
+<A NAME="lbBL">&nbsp;</A>
+<H2>AUTHORS</H2>
+
+<P>
+
+Extended Tcl was created by Karl Lehenbauer (<A HREF="mailto:karl@neosoft.com">karl@neosoft.com</A>) and
+Mark Diekhans (<A HREF="mailto:markd@grizzly.com">markd@grizzly.com</A>).
+<P>
+
+<P>
+<P>
+<P>
+<P>
+
+<HR>
+<A NAME="index">&nbsp;</A><H2>Index</H2>
+<DL>
+<DT><A HREF="#lbAB">NAME</A><DD>
+<DT><A HREF="#lbAC">OVERVIEW</A><DD>
+<DT><A HREF="#lbAD">WRITING TCL EXTENSIONS IN C</A><DD>
+<DT><A HREF="#lbAE">ANOTHER C EXTENSION - THE MAX COMMAND</A><DD>
+<DT><A HREF="#lbAF">ANOTHER C EXTENSION - THE LREVERSE COMMAND</A><DD>
+<DT><A HREF="#lbAG">INSTALLING YOUR COMMAND</A><DD>
+<DT><A HREF="#lbAH">DYNAMIC STRINGS</A><DD>
+<DT><A HREF="#lbAI">CLIENT DATA</A><DD>
+<DT><A HREF="#lbAJ">THEORY OF HANDLES</A><DD>
+<DT><A HREF="#lbAK">TRACKING MEMORY CORRUPTION PROBLEMS</A><DD>
+<DT><A HREF="#lbAL">INSTALLING YOUR EXTENSIONS INTO EXTENDED TCL</A><DD>
+<DT><A HREF="#lbAM">MAKING APPLICATION INFORMATION VISIBLE FROM EXTENDED TCL</A><DD>
+<DT><A HREF="#lbAN">EXTENDED TCL EXIT</A><DD>
+<DT><A HREF="#lbAO">EXECUTING TCL CODE FROM YOUR C EXTENSION</A><DD>
+<DT><A HREF="#lbAP">ACCESSING TCL VARIABLES AND ARRAYS FROM YOUR C EXTENSIONS</A><DD>
+<DT><A HREF="#lbAQ">LINKING TCL VARIABLES TO C VARIABLES</A><DD>
+<DT><A HREF="#lbAR">ADDING NEW MATH FUNCTIONS TO TCL</A><DD>
+<DT><A HREF="#lbAS">PERFORMING TILDE SUBSTITUTIONS ON FILENAMES</A><DD>
+<DT><A HREF="#lbAT">SETTING THE RECURSION LIMIT</A><DD>
+<DT><A HREF="#lbAU">HANDLING SIGNALS FROM TCL EXTENSIONS</A><DD>
+<DT><A HREF="#lbAV">PARSING BACKSLASH SEQUENCES</A><DD>
+<DT><A HREF="#lbAW">HASH TABLES</A><DD>
+<DT><A HREF="#lbAX">TRACING VARIABLE ACCESSES</A><DD>
+<DT><A HREF="#lbAY">TRACING EXECUTION</A><DD>
+<DT><A HREF="#lbAZ">EVALUATING TCL EXPRESSIONS FROM C</A><DD>
+<DT><A HREF="#lbBA">PATTERN MATCHING</A><DD>
+<DT><A HREF="#lbBB">REGULAR EXPRESSION PATTERN MATCHING</A><DD>
+<DT><A HREF="#lbBC">MANIPULATING TCL LISTS FROM C EXTENSIONS</A><DD>
+<DT><A HREF="#lbBD">CONCATENATING STRINGS</A><DD>
+<DT><A HREF="#lbBE">DETECTING WHETHER OR NOT YOU HAVE A COMPLETE COMMAND</A><DD>
+<DT><A HREF="#lbBF">RECORDING COMMANDS FOR COMMAND HISTORY</A><DD>
+<DT><A HREF="#lbBG">CONVERTING FLOATING POINT VALUES TO STRINGS</A><DD>
+<DT><A HREF="#lbBH">CREATING CHILD PROCESSES AND PIPELINES FROM C</A><DD>
+<DT><A HREF="#lbBI">ACCESSING TCL FILEHANDLES FROM C</A><DD>
+<DT><A HREF="#lbBJ">MANAGING BACKGROUND PROCESS TERMINATION AND CLEANUP</A><DD>
+<DT><A HREF="#lbBK">FOR MORE INFORMATION</A><DD>
+<DT><A HREF="#lbBL">AUTHORS</A><DD>
+</DL>
+<HR>
+This document was created by
+<A HREF="http://localhost/cgi-bin/man/man2html">man2html</A>,
+using the manual pages.<BR>
+Time: 03:29:19 GMT, January 21, 2019
+</BODY>
+</HTML>
